@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Script Progress</title>
+    <style>
+        body {
+            background-color: black;
+            color: lime;
+            font-family: Arial, sans-serif;
+        }
+
+        p {
+            display: flex;
+            justify-content: center;
+        }
+
+        h1 {
+            text-align: center;
+        }
+
+        h2 {
+            color: lime;
+        }
+
+        .table-container {
+            display: flex;
+            justify-content: space-around;
+        }
+
+        table {
+            width: 100%;
+            margin-top: 20px;
+        }
+
+        table, th, td {
+            border: 1px solid lime;
+            border-collapse: collapse;
+            padding: 8px;
+            text-align: center;
+        }
+
+        th {
+            background-color: lime;
+            color: black;
+        }
+    </style>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script type="text/javascript">
+        $(document).ready(function() {
+            function fetchLog() {
+                $.ajax({
+                    url: '/get_log',
+                    success: function(data) {
+                        if (data.is_complete) {
+                            $('#status').text('Port scan completed.');
+                            clearInterval(logInterval);
+                        } else {
+                            $('#status').text('Port scan in progress...');
+                        }
+
+                        const portInfoTable = $('#port_info');
+                        const openPortInfoTable = $('#open_port_info');
+                        portInfoTable.empty();
+                        openPortInfoTable.empty();
+
+                        let openCount = 0;
+                        let closedCount = 0;
+                        let filteredCount = 0;
+                        let unfilteredCount = 0;
+                        let openFilteredCount = 0;
+                        let closedFilteredCount = 0;
+
+                        data.port_info.sort((a, b) => parseInt(a.port) - parseInt(b.port));
+
+                        data.port_info.forEach(function(info) {
+                            const row = $('<tr>');
+                            row.append($('<td>').text(info.port));
+                            row.append($('<td>').text(info.protocol));
+                            row.append($('<td>').text(info.state));
+                            row.append($('<td>').text(info.service));
+                            portInfoTable.append(row);
+
+                            switch (info.state) {
+                                case 'open':
+                                    openCount++;
+                                    if (info.service === 'filtered') {
+                                        openFilteredCount++;
+                                    }
+                                    break;
+                                case 'closed':
+                                    closedCount++;
+                                    if (info.service === 'filtered') {
+                                        closedFilteredCount++;
+                                    }
+                                    break;
+                                case 'filtered':
+                                    filteredCount++;
+                                    break;
+                                case 'unfiltered':
+                                    unfilteredCount++;
+                                    break;
+                                case 'open|filtered':
+                                    openFilteredCount++;
+                                    break;
+                                case 'closed|filtered':
+                                    closedFilteredCount++;
+                                    break;
+                            }
+
+                            if (info.state === 'open') {
+                                const openRow = $('<tr>');
+                                openRow.append($('<td>').text(info.port));
+                                openRow.append($('<td>').text(info.protocol));
+                                openRow.append($('<td>').text(info.state));
+                                openRow.append($('<td>').text(info.service));
+                                openPortInfoTable.append(openRow);
+                            }
+                        });
+
+                        $('#open_count').text(`Open: ${openCount}`);
+                        $('#closed_count').text(`Closed: ${closedCount}`);
+                        $('#filtered_count').text(`Filtered: ${filteredCount}`);
+                        $('#unfiltered_count').text(`Unfiltered: ${unfilteredCount}`);
+                        $('#open_filtered_count').text(`Open|Filtered: ${openFilteredCount}`);
+                        $('#closed_filtered_count').text(`Closed|Filtered: ${closedFilteredCount}`);
+                    },
+                    error: function() {
+                        $('#status').text('Error fetching log.');
+                    }
+                });
+            }
+
+            const logInterval = setInterval(fetchLog, 1000);
+        });
+    </script>
+</head>
+<body>
+    <h1>Script Progress</h1>
+    <p id="status">Starting port scan...</p>
+    <p id="open_count"></p>
+    <p id="closed_count"></p>
+    <p id="filtered_count"></p>
+    <p id="unfiltered_count"></p>
+    <p id="open_filtered_count"></p>
+    <p id="closed_filtered_count"></p>
+    <div class="table-container">
+        <div>
+            <h2>All Port Information</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Port</th>
+                        <th>Protocol</th>
+                        <th>State</th>
+                        <th>Service</th>
+                    </tr>
+                </thead>
+                <tbody id="port_info"></tbody>
+            </table>
+        </div>
+        <div>
+            <h2>Open Ports Information</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Port</th>
+                        <th>Protocol</th>
+                        <th>State</th>
+                        <th>Service</th>
+                    </tr>
+                </thead>
+                <tbody id="open_port_info"></tbody>
+            </table>
+        </div>
+    </div>
+</body>
+</html>
